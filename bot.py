@@ -10,7 +10,7 @@ TOKEN                = os.environ.get("DISCORD_TOKEN")
 LOBBY_CHANNEL_ID     = int(os.environ.get("LOBBY_CHANNEL_ID", 0))
 LOG_CHANNEL_ID       = int(os.environ.get("LOG_CHANNEL_ID", 0))
 PRIVATE_CATEGORY_ID  = int(os.environ.get("PRIVATE_CATEGORY_ID", 0))  # catégorie où créer les fils privés
-MAX_PLAYERS          = 5
+MAX_PLAYERS          = 1
 PROMO_CODE           = "SULEYECOM"
 DATA_FILE            = "lobbies.json"
 
