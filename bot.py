@@ -17,7 +17,7 @@ DATA_FILE            = "lobbies.json"
 # Prix réels
 PRIX_ORIGINAL_USD  = 149   # Agency sans code
 REMISE_PCT         = 40    # -40% avec SULEYECOM
-PRIX_GROUPE_EUR    = 16.50 # par personne après remise + divisionj
+PRIX_GROUPE_EUR    = 16.50 # par personne après remise + division
 
 # ─── COULEURS EMBED ────────────────────────────────────────────────────────────
 COLOR_OPEN   = 0xFFD700
