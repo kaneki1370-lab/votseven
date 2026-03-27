@@ -54,7 +54,7 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
         embed = discord.Embed(
             title="✅  Groupe #" + str(lobby_id) + " — COMPLET",
             description=(
-                "Ce groupe est **complet** ! Les 5 membres peuvent maintenant se coordonner.\n"
+                "Ce groupe est **complet** ! Les 5 membres sont dans leur salon privé.\n"
                 "Un nouveau groupe a été ouvert ci-dessous 👇"
             ),
             color=COLOR_FULL
@@ -66,6 +66,54 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
         )
         embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency")
         return embed
+
+    # ── Lobby OUVERT ──
+    prix_seul_mois  = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100), 2)
+    economie_mois   = round(prix_seul_mois - PRIX_GROUPE_EUR, 2)
+    economie_annee  = round(economie_mois * 12, 2)
+
+    filled = "🟡" * count
+    empty  = "⬛" * remaining
+
+    embed = discord.Embed(
+        title=f"💰 Groupe #{lobby_id} — {count}/{MAX_PLAYERS} membres",
+        description=(
+            "### Brandsearch Agency pour **16,50€/mois** 🔥\n"
+            f"Divisez le prix par 5 et profitez de **-{REMISE_PCT}%** avec le code **`{PROMO_CODE}`**.\n\n"
+            f"⏳ *Il reste **{remaining} place{'s' if remaining > 1 else ''}** dans ce groupe.*"
+        ),
+        color=COLOR_OPEN
+    )
+
+    embed.add_field(
+        name="💵 Économie réalisée",
+        value=(
+            f"Prix solo : ~{prix_seul_mois}$/mois ➔ **Prix groupe : {PRIX_GROUPE_EUR}€/mois**\n"
+            f"🎯 Tu économises **{economie_annee}€/an** !"
+        ),
+        inline=False
+    )
+
+    membres_str = " ".join([f"<@{m}>" for m in members]) if members else "*Aucun membre — sois le premier !*"
+    embed.add_field(
+        name=f"👥 Membres ({count}/{MAX_PLAYERS})",
+        value=f"{filled}{empty}  {membres_str}",
+        inline=False
+    )
+
+    # Étapes condensées au maximum
+    embed.add_field(
+        name="📋 Comment ça marche ?",
+        value=(
+            "1️⃣ Clique sur **Rejoindre** pour bloquer ta place.\n"
+            "2️⃣ À **5/5**, un salon secret se crée automatiquement.\n"
+            "3️⃣ Vous vous organisez à l'intérieur pour le paiement !"
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency")
+    return embed
 
     # ── Lobby OUVERT ──
 
