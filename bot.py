@@ -101,7 +101,7 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
         inline=False
     )
 
-    # Étapes condensées au maximum
+    # Étapes condensées au maximuml
     embed.add_field(
         name="📋 Comment ça marche ?",
         value=(
