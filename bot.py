@@ -3,23 +3,24 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
+import asyncio
 from datetime import datetime
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 TOKEN                = os.environ.get("DISCORD_TOKEN")
 LOBBY_CHANNEL_ID     = int(os.environ.get("LOBBY_CHANNEL_ID", 0))
 LOG_CHANNEL_ID       = int(os.environ.get("LOG_CHANNEL_ID", 0))
-PRIVATE_CATEGORY_ID  = int(os.environ.get("PRIVATE_CATEGORY_ID", 0))  # catégorie où créer les fils privés
-MAX_PLAYERS          = 1
+PRIVATE_CATEGORY_ID  = int(os.environ.get("PRIVATE_CATEGORY_ID", 0))
+MAX_PLAYERS          = 5          # ✅ CORRIGÉ : remis à 5
 PROMO_CODE           = "SULEYECOM"
 DATA_FILE            = "lobbies.json"
 
 # Prix réels
-PRIX_ORIGINAL_USD  = 149   # Agency sans code
-REMISE_PCT         = 40    # -40% avec SULEYECOM
-PRIX_GROUPE_EUR    = 16.50 # par personne après remise + division
+PRIX_ORIGINAL_USD  = 149    # Agency sans code
+REMISE_PCT         = 40     # -40% avec SULEYECOM
+PRIX_GROUPE_EUR    = 16.50  # par personne après remise + division par 5
 
-# ─── COULEURS EMBED ────────────────────────────────────────────────────────────d
+# ─── COULEURS EMBED ────────────────────────────────────────────────────────────
 COLOR_OPEN   = 0xFFD700
 COLOR_FULL   = 0x2ECC71
 COLOR_CLOSED = 0x95A5A6
@@ -68,9 +69,15 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
         return embed
 
     # ── Lobby OUVERT ──
-    prix_seul_mois  = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100), 2)
-    economie_mois   = round(prix_seul_mois - PRIX_GROUPE_EUR, 2)
-    economie_annee  = round(economie_mois * 12, 2)
+    # ✅ CORRIGÉ : calcul propre et cohérent, tout en euros
+    # 149$ / 5 personnes = 29.8$/personne
+    # 29.8$ * 0.60 (après -40%) ≈ 17.88$ → mais on affiche le vrai prix négocié : 16.50€
+    # Économie annuelle : un abo solo Agency coûterait ~149$ soit ~138€/mois
+    # Avec groupe : 16.50€/mois → économie = (138 - 16.50) * 12 = ~1458€/an
+    # On garde simple : on compare vs prix solo avec code uniquement = 149*0.6 = 89.4$ ≈ 83€/mois
+    PRIX_SOLO_AVEC_CODE_EUR = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100) * 0.93, 2)  # ~83€ (1$≈0.93€)
+    economie_mois           = round(PRIX_SOLO_AVEC_CODE_EUR - PRIX_GROUPE_EUR, 2)
+    economie_annee          = round(economie_mois * 12, 2)
 
     filled = "🟡" * count
     empty  = "⬛" * remaining
@@ -88,8 +95,9 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
     embed.add_field(
         name="💵 Économie réalisée",
         value=(
-            f"Prix solo : ~{prix_seul_mois}$/mois ➔ **Prix groupe : {PRIX_GROUPE_EUR}€/mois**\n"
-            f"🎯 Tu économises **{economie_annee}€/an** !"
+            f"• Prix Agency **solo** (avec code) : ~{PRIX_SOLO_AVEC_CODE_EUR}€/mois\n"
+            f"• Prix Agency **en groupe** : **{PRIX_GROUPE_EUR}€/mois** ✅\n"
+            f"🎯 Tu économises **~{economie_mois}€/mois** soit **~{economie_annee}€/an** !"
         ),
         inline=False
     )
@@ -101,94 +109,25 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
         inline=False
     )
 
-    # Étapes condensées au maximuml
-    embed.add_field(
-        name="📋 Comment ça marche ?",
-        value=(
-            "1️⃣ Clique sur **Rejoindre** pour bloquer ta place.\n"
-            "2️⃣ À **5/5**, un salon secret se crée automatiquement.\n"
-            "3️⃣ Vous vous organisez à l'intérieur pour le paiement !"
-        ),
-        inline=False
-    )
-
-    embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency")
-    return embed
-
-    # ── Lobby OUVERT ──
-
-    # Calcul économies
-    prix_seul_mois  = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100), 2)  # après code seul
-    economie_mois   = round(prix_seul_mois - PRIX_GROUPE_EUR, 2)
-    economie_annee  = round(economie_mois * 12, 2)
-
-    # Barre de progression
-    filled = "🟡" * count
-    empty  = "⬛" * remaining
-
-    embed = discord.Embed(
-        title=f"💰  Groupe #{lobby_id} — {count}/{MAX_PLAYERS} membres",
-        description=(
-            "### Accède à Brandsearch Agency pour **16,50€/mois** 🔥\n"
-            f"Au lieu de **{PRIX_ORIGINAL_USD}$/mois** en solo — rejoins un groupe de 5 "
-            f"et applique le code **`{PROMO_CODE}`** pour **-{REMISE_PCT}%**.\n\n"
-            f"Il reste **{remaining} place{'s' if remaining > 1 else ''}** dans ce groupe."
-        ),
-        color=COLOR_OPEN
-    )
-
-    # Économies
-    embed.add_field(
-        name="💵 Ce que tu économises",
-        value=(
-            f"**Prix solo** (avec code) : ~{prix_seul_mois}$/mois\n"
-            f"**Prix groupe** : **{PRIX_GROUPE_EUR}€/mois**\n"
-            f"→ Tu économises ~**{economie_mois}€/mois** soit **{economie_annee}€/an** 🎯"
-        ),
-        inline=False
-    )
-
-    # Membres actuels
-    membres_str = " ".join([f"<@{m}>" for m in members]) if members else "*Aucun membre pour l'instant — sois le premier !*"
-    embed.add_field(
-        name=f"👥 Membres ({count}/{MAX_PLAYERS})",
-        value=f"{filled}{empty}  {membres_str}",
-        inline=False
-    )
-
-    # Ce qu'inclut Agency
     embed.add_field(
         name="🚀 Brandsearch Agency inclut",
         value=(
             "• **Brand Library** — Unlimited stores (spy Shopify, trafic, demande)\n"
             "• **Spectre** — 100 marques trackées en simultané\n"
             "• **Discovery** — Unlimited (ads qui vendent, triggers émotionnels IA)\n"
-            "• **Swipe Files** — Sauvegarde depuis partout (Chrome ext, Instagram)\n"
-            "• **Remplace Foreplay & Atria** — Économie de 150$/mois en plus ✅"
+            "• **Swipe Files** — Chrome ext, Instagram auto-sync\n"
+            "• **Remplace Foreplay & Atria** — 150$/mois économisés en plus ✅"
         ),
         inline=False
     )
 
-    # Instructions
     embed.add_field(
-        name="📋 Comment ça marche",
+        name="📋 Comment ça marche ?",
         value=(
-            "1️⃣ Clique **Rejoindre** pour réserver ta place\n"
-            "2️⃣ Attends que le groupe soit **5/5**\n"
-            "3️⃣ Un **fil privé** est automatiquement créé pour vous 5 🔒\n"
-            f"4️⃣ Dans le fil : partagez RIB & email pour organiser le paiement\n"
-            f"5️⃣ Utilisez le code **`{PROMO_CODE}`** lors du paiement\n"
-            "6️⃣ Profitez de Brandsearch Agency à **16,50€/mois** 🚀"
-        ),
-        inline=False
-    )
-
-    # Info fil privé
-    embed.add_field(
-        name="🔒 Fil privé automatique",
-        value=(
-            "Dès que le groupe est complet, le bot crée un **canal privé** visible uniquement par vous 5 + les admins.\n"
-            "Personne d'autre sur le serveur ne peut le voir. Coordonnez-vous librement à l'intérieur."
+            "1️⃣ Clique sur **Rejoindre** pour bloquer ta place\n"
+            "2️⃣ À **5/5**, un salon secret se crée automatiquement 🔒\n"
+            "3️⃣ Vous organisez le paiement à l'intérieur\n"
+            f"4️⃣ Code **`{PROMO_CODE}`** → **-{REMISE_PCT}%** au moment de souscrire"
         ),
         inline=False
     )
@@ -254,10 +193,11 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
 
     places_restantes = MAX_PLAYERS - len(lobby["members"])
 
-    # Lobby complet ?
+    # ── Lobby complet ? ────────────────────────────────────────────────────────
     if len(lobby["members"]) >= MAX_PLAYERS:
         lobby["status"] = "full"
         save_data(data)
+
         await interaction.response.defer()
 
         channel = bot.get_channel(LOBBY_CHANNEL_ID)
@@ -267,12 +207,11 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
         view.children[1].disabled = True
         await msg.edit(embed=build_embed(lobby_id, lobby["members"]), view=view)
 
-        # ── Création du fil privé ──────────────────────────────────────────────
+        # ── Création du salon privé ────────────────────────────────────────────
         guild        = interaction.guild
         private_chan = None
 
         try:
-            # Récupère les objets Member pour les 5 joueurs
             membres_obj = []
             for uid in lobby["members"]:
                 m = guild.get_member(int(uid))
@@ -284,7 +223,6 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                 if m:
                     membres_obj.append(m)
 
-            # Permissions : tout le monde = rien, chaque membre = voir + écrire
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(view_channel=False),
                 guild.me:           discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True),
@@ -292,12 +230,10 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
             for m in membres_obj:
                 overwrites[m] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
 
-            # Ajout des admins (manage_guild) automatiquement
             for role in guild.roles:
                 if role.permissions.administrator or role.permissions.manage_guild:
                     overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
 
-            # Catégorie cible (optionnelle)
             category = None
             if PRIVATE_CATEGORY_ID:
                 category = guild.get_channel(PRIVATE_CATEGORY_ID)
@@ -306,18 +242,19 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                 name=f"groupe-{lobby_id}-brandsearch",
                 overwrites=overwrites,
                 category=category,
-                topic=f"Groupe #{lobby_id} Brandsearch Agency — fil privé des 5 membres"
+                topic=f"Groupe #{lobby_id} Brandsearch Agency — salon privé des 5 membres"
             )
 
-            # Mentions pour le ping
             mentions = " ".join([m.mention for m in membres_obj])
 
-            # Message de bienvenue dans le fil privé
+            PRIX_SOLO_AVEC_CODE_EUR = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100) * 0.93, 2)
+            economie_annee          = round((PRIX_SOLO_AVEC_CODE_EUR - PRIX_GROUPE_EUR) * 12, 2)
+
             welcome_embed = discord.Embed(
-                title=f"🔒 Groupe #{lobby_id} — Fil privé Brandsearch",
+                title=f"🔒 Groupe #{lobby_id} — Salon privé Brandsearch",
                 description=(
                     f"Bienvenue {mentions} !\n\n"
-                    "Vous êtes les **5 membres** de ce groupe. Ce canal est **totalement invisible** "
+                    "Vous êtes les **5 membres** de ce groupe. Ce salon est **totalement invisible** "
                     "pour les autres membres du serveur.\n\n"
                     "**Coordonnez-vous ici librement** pour organiser le paiement groupé."
                 ),
@@ -327,53 +264,56 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                 name="💰 Récapitulatif",
                 value=(
                     f"• Plan : **Brandsearch Agency** (149$/mois)\n"
-                    f"• Code : **`{PROMO_CODE}`** → **-40%**\n"
+                    f"• Code : **`{PROMO_CODE}`** → **-{REMISE_PCT}%**\n"
                     f"• Prix par personne : **{PRIX_GROUPE_EUR}€/mois** 🎯\n"
-                    f"• Économie vs solo : ~**{round((PRIX_ORIGINAL_USD * 0.6 / 5) * 12, 0):.0f}€/an**"
+                    f"• Économie vs solo (avec code) : ~**{economie_annee}€/an**"
                 ),
                 inline=False
             )
             welcome_embed.add_field(
                 name="📋 Étapes",
                 value=(
-                    "1️⃣ Partagez vos **RIB / emails** ici pour organiser le paiement\n"
-                    "2️⃣ Désignez un référent qui souscrit avec le code\n"
-                    f"3️⃣ Utilisez le code **`{PROMO_CODE}`** sur Brandsearch\n"
-                    "4️⃣ Partagez les accès entre vous dans ce canal\n"
-                    "⚠️ Les admins peuvent voir ce fil — restez corrects 👀"
+                    "1️⃣ Désignez un **référent** qui souscrit l'abonnement\n"
+                    "2️⃣ Le référent partage son **RIB** ici pour se faire rembourser\n"
+                    "3️⃣ Les 4 autres font un virement de **16,50€** au référent\n"
+                    f"4️⃣ Le référent souscrit avec le code **`{PROMO_CODE}`** sur Brandsearch\n"
+                    "5️⃣ Il ajoute vos **emails** dans l'espace Agency pour vous donner accès\n"
+                    "6️⃣ Chacun a ses propres accès — aucune donnée partagée 🔐\n\n"
+                    "⚠️ Les admins peuvent voir ce salon — restez corrects 👀"
                 ),
                 inline=False
             )
-            welcome_embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency • Ce canal est modéré")
+            welcome_embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency • Salon modéré")
 
             await private_chan.send(content=mentions, embed=welcome_embed)
 
-            # Log avec lien vers le fil
-            data2 = load_data()
-            data2["lobbies"][key]["private_channel_id"] = str(private_chan.id)
-            save_data(data2)
+            # ✅ CORRIGÉ : sauvegarde du channel_id proprement sans re-charger
+            data["lobbies"][key]["private_channel_id"] = str(private_chan.id)
+            save_data(data)
 
         except discord.Forbidden:
-            print(f"❌ Permissions insuffisantes pour créer le fil privé du groupe #{lobby_id}")
+            print(f"❌ Permissions insuffisantes pour créer le salon privé du groupe #{lobby_id}")
         except Exception as e:
-            print(f"❌ Erreur création fil privé groupe #{lobby_id} : {e}")
+            print(f"❌ Erreur création salon privé groupe #{lobby_id} : {e}")
 
         await send_log(interaction.guild, lobby_id, interaction.user, "full", private_chan)
-        await create_new_lobby(interaction.guild, load_data())
+
+        # ✅ CORRIGÉ : on recharge les données APRÈS la sauvegarde pour éviter la race condition
+        await create_new_lobby(interaction.guild)
 
     else:
         save_data(data)
         await interaction.response.defer()
+
         channel = bot.get_channel(LOBBY_CHANNEL_ID)
         msg     = await channel.fetch_message(int(lobby["message_id"]))
         await msg.edit(embed=build_embed(lobby_id, lobby["members"]), view=LobbyView(lobby_id))
 
-        # Message de confirmation privé
         try:
             await interaction.user.send(
                 f"✅ **Tu as rejoint le Groupe #{lobby_id} !**\n\n"
                 f"Il reste **{places_restantes} place{'s' if places_restantes > 1 else ''}** avant que le groupe soit complet.\n"
-                f"Dès que vous êtes 5, un **fil privé** est créé automatiquement pour vous coordonner. 🔒\n\n"
+                f"Dès que vous êtes {MAX_PLAYERS}, un **salon privé** est créé automatiquement pour vous coordonner. 🔒\n\n"
                 f"**Rappel :** Code **`{PROMO_CODE}`** = **-{REMISE_PCT}%** sur Brandsearch Agency → **{PRIX_GROUPE_EUR}€/mois** 💰"
             )
         except discord.Forbidden:
@@ -400,7 +340,7 @@ async def handle_leave(interaction: discord.Interaction, lobby_id: int):
 
     if lobby["status"] == "full":
         await interaction.response.send_message(
-            "⛔ Le groupe est complet, tu ne peux plus quitter. Gère ça dans votre groupe privé.",
+            "⛔ Le groupe est complet, tu ne peux plus quitter. Gère ça dans votre salon privé.",
             ephemeral=True
         )
         return
@@ -427,13 +367,13 @@ async def send_log(guild: discord.Guild, lobby_id: int, user, action: str, priva
     actions = {
         "join"   : f"a rejoint le Groupe #{lobby_id}",
         "leave"  : f"a quitté le Groupe #{lobby_id}",
-        "full"   : f"a complété le Groupe #{lobby_id} (5/5) — nouveau groupe créé automatiquement",
+        "full"   : f"a complété le Groupe #{lobby_id} (5/5) — salon privé créé + nouveau groupe ouvert",
         "create" : f"— Groupe #{lobby_id} créé automatiquement",
         "close"  : f"— Groupe #{lobby_id} fermé et salon supprimé",
         "archive": f"— Groupe #{lobby_id} archivé (salon supprimé, données conservées)",
     }
 
-    is_system = action == "create"
+    is_system = action in ("create",)
     embed = discord.Embed(
         title=f"{icons.get(action,'📋')} {'Système' if is_system else user.display_name} {actions[action]}",
         color=colors.get(action, 0x95A5A6),
@@ -445,15 +385,15 @@ async def send_log(guild: discord.Guild, lobby_id: int, user, action: str, priva
     embed.add_field(name="Groupe", value=f"#{lobby_id}", inline=True)
     embed.add_field(name="Heure (UTC)", value=datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S"), inline=True)
     if private_chan:
-        embed.add_field(name="🔒 Fil privé créé", value=private_chan.mention, inline=False)
+        embed.add_field(name="🔒 Salon privé créé", value=private_chan.mention, inline=False)
 
     await log_channel.send(embed=embed)
 
 
 # ─── CRÉATION D'UN GROUPE ──────────────────────────────────────────────────────
 async def create_new_lobby(guild: discord.Guild, data: dict = None):
-    if data is None:
-        data = load_data()
+    # ✅ CORRIGÉ : on recharge TOUJOURS depuis le disque pour avoir les données fraîches
+    data = load_data()
 
     data["lobby_counter"] += 1
     lobby_id = data["lobby_counter"]
@@ -465,11 +405,12 @@ async def create_new_lobby(guild: discord.Guild, data: dict = None):
     msg     = await channel.send(embed=embed, view=view)
 
     data["lobbies"][key] = {
-        "message_id": str(msg.id),
-        "members"   : [],
-        "join_times": {},
-        "status"    : "open",
-        "created_at": datetime.utcnow().isoformat()
+        "message_id"       : str(msg.id),
+        "members"          : [],
+        "join_times"       : {},
+        "status"           : "open",
+        "created_at"       : datetime.utcnow().isoformat(),
+        "private_channel_id": None
     }
     save_data(data)
 
@@ -540,7 +481,6 @@ async def kick_membre(interaction: discord.Interaction, lobby_id: int, membre: d
     lobby["members"].remove(user_id)
     lobby["join_times"].pop(user_id, None)
 
-    # Si le groupe était complet, le rouvrir
     if lobby["status"] == "full":
         lobby["status"] = "open"
 
@@ -577,16 +517,12 @@ class ConfirmFermetureView(discord.ui.View):
             await interaction.response.send_message("❌ Groupe introuvable dans les données.", ephemeral=True)
             return
 
-        # ── Récupère l'ID du salon privé ───────────────────────────────────────
         private_chan_id = lobby.get("private_channel_id")
-        deleted_chan    = None
 
         if private_chan_id:
             private_chan = interaction.guild.get_channel(int(private_chan_id))
             if private_chan:
-                deleted_chan = private_chan
                 try:
-                    # Message d'adieu dans le salon avant suppression
                     closing_embed = discord.Embed(
                         title="🔒 Ce salon va être supprimé",
                         description=(
@@ -599,9 +535,6 @@ class ConfirmFermetureView(discord.ui.View):
                     )
                     closing_embed.set_footer(text="Suppression dans 5 secondes…")
                     await private_chan.send(embed=closing_embed)
-
-                    # Délai de 5s pour que les membres voient le message
-                    import asyncio
                     await asyncio.sleep(5)
                     await private_chan.delete(reason=f"Groupe #{self.lobby_id} fermé par admin — {self.raison}")
                 except discord.Forbidden:
@@ -611,28 +544,26 @@ class ConfirmFermetureView(discord.ui.View):
                     )
                     return
                 except discord.NotFound:
-                    pass  # Déjà supprimé manuellement
+                    pass
             else:
                 await interaction.followup.send(
-                    f"⚠️ Salon privé introuvable (ID `{private_chan_id}`). Il a peut-être déjà été supprimé manuellement.\n"
+                    f"⚠️ Salon privé introuvable (ID `{private_chan_id}`). Déjà supprimé manuellement ?\n"
                     "Les données du groupe ont quand même été archivées.",
                     ephemeral=True
                 )
         else:
             await interaction.followup.send(
-                f"ℹ️ Aucun salon privé enregistré pour le Groupe #{self.lobby_id} (groupe peut-être pas encore complet).",
+                f"ℹ️ Aucun salon privé enregistré pour le Groupe #{self.lobby_id}.",
                 ephemeral=True
             )
 
-        # ── Archive les données (status → closed) ─────────────────────────────
-        data["lobbies"][key]["status"]      = "closed"
-        data["lobbies"][key]["closed_at"]   = datetime.utcnow().isoformat()
-        data["lobbies"][key]["closed_by"]   = str(interaction.user.id)
-        data["lobbies"][key]["close_reason"]= self.raison
+        data["lobbies"][key]["status"]             = "closed"
+        data["lobbies"][key]["closed_at"]          = datetime.utcnow().isoformat()
+        data["lobbies"][key]["closed_by"]          = str(interaction.user.id)
+        data["lobbies"][key]["close_reason"]       = self.raison
         data["lobbies"][key]["private_channel_id"] = None
         save_data(data)
 
-        # ── Log ───────────────────────────────────────────────────────────────
         await send_log(interaction.guild, self.lobby_id, interaction.user, "close", None)
 
         await interaction.response.send_message(
@@ -648,8 +579,7 @@ class ConfirmFermetureView(discord.ui.View):
         await interaction.response.send_message("Annulé. Aucune modification effectuée.", ephemeral=True)
 
     async def on_timeout(self):
-        if not self.done:
-            pass  # Vue expirée silencieusement
+        pass
 
 
 @bot.tree.command(name="fermer-groupe", description="[Admin] Clôture un groupe et supprime son salon privé")
@@ -671,10 +601,9 @@ async def fermer_groupe(interaction: discord.Interaction, lobby_id: int, raison:
         await interaction.response.send_message(f"⚠️ Le Groupe #{lobby_id} est déjà fermé.", ephemeral=True)
         return
 
-    # Récap avant confirmation
-    membres_str = " ".join([f"<@{m}>" for m in lobby["members"]]) or "*aucun*"
+    membres_str     = " ".join([f"<@{m}>" for m in lobby["members"]]) or "*aucun*"
     private_chan_id = lobby.get("private_channel_id")
-    chan_info = f"<#{private_chan_id}>" if private_chan_id else "*pas de salon privé*"
+    chan_info       = f"<#{private_chan_id}>" if private_chan_id else "*pas de salon privé*"
 
     confirm_embed = discord.Embed(
         title=f"⚠️ Confirmer la fermeture du Groupe #{lobby_id}",
@@ -713,7 +642,7 @@ async def on_ready():
     if open_count == 0 and LOBBY_CHANNEL_ID:
         guild = bot.guilds[0] if bot.guilds else None
         if guild:
-            await create_new_lobby(guild, data)
+            await create_new_lobby(guild)
             print("✅ Groupe initial créé")
 
 
