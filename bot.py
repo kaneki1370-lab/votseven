@@ -51,7 +51,7 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
         desc  = (
             f"**Divisez le coût à {MAX_PLAYERS} et accédez à Brandsearch.**\n"
             f"Utilisez le code **`{PROMO_CODE}`** pour **-40%** sur votre abonnement.\n\n"
-            f"{''.join([f'<@{m}> ' for m in members]) if members else '*Aucun membre pour l\'instant*'}\n"
+            f"{' '.join([f'<@{m}>' for m in members]) if members else '*Aucun membre pour instant*'}\n"
         )
 
     embed = discord.Embed(title=title, description=desc, color=color)
