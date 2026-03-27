@@ -19,7 +19,7 @@ PRIX_ORIGINAL_USD  = 149   # Agency sans code
 REMISE_PCT         = 40    # -40% avec SULEYECOM
 PRIX_GROUPE_EUR    = 16.50 # par personne après remise + division
 
-# ─── COULEURS EMBED ────────────────────────────────────────────────────────────
+# ─── COULEURS EMBED ────────────────────────────────────────────────────────────d
 COLOR_OPEN   = 0xFFD700
 COLOR_FULL   = 0x2ECC71
 COLOR_CLOSED = 0x95A5A6
