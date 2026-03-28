@@ -69,25 +69,18 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
         return embed
 
     # ── Lobby OUVERT ──
-    # ✅ CORRIGÉ : calcul propre et cohérent, tout en euros
-    # 149$ / 5 personnes = 29.8$/personne
-    # 29.8$ * 0.60 (après -40%) ≈ 17.88$ → mais on affiche le vrai prix négocié : 16.50€
-    # Économie annuelle : un abo solo Agency coûterait ~149$ soit ~138€/mois
-    # Avec groupe : 16.50€/mois → économie = (138 - 16.50) * 12 = ~1458€/an
-    # On garde simple : on compare vs prix solo avec code uniquement = 149*0.6 = 89.4$ ≈ 83€/mois
-    PRIX_SOLO_AVEC_CODE_EUR = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100) * 0.93, 2)  # ~83€ (1$≈0.93€)
-    economie_mois           = round(PRIX_SOLO_AVEC_CODE_EUR - PRIX_GROUPE_EUR, 2)
-    economie_annee          = round(economie_mois * 12, 2)
+    # Calcul tout en euros pour cohérence
+    PRIX_SOLO_EUR  = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100) * 0.93, 2)  # ~83€/mois avec code, seul
+    economie_annee = round((PRIX_SOLO_EUR - PRIX_GROUPE_EUR) * 12, 2)
 
-    filled = "🟡" * count
-    empty  = "⬛" * remaining
+    membres_str = " ".join([f"<@{m}>" for m in members]) if members else "*Aucun membre — sois le premier !*"
 
     embed = discord.Embed(
         title=f"💰 Groupe #{lobby_id} — {count}/{MAX_PLAYERS} membres",
         description=(
-            "### Brandsearch Agency pour **16,50€/mois** 🔥\n"
-            f"Divisez le prix par 5 et profitez de **-{REMISE_PCT}%** avec le code **`{PROMO_CODE}`**.\n\n"
-            f"⏳ *Il reste **{remaining} place{'s' if remaining > 1 else ''}** dans ce groupe.*"
+            f"**Brandsearch Agency pour {PRIX_GROUPE_EUR}€/mois** 🔥\n"
+            f"Divisez le prix par 5 et profitez de **-{REMISE_PCT}%** avec le code **`{PROMO_CODE}`**.\n"
+            f"Il reste **{remaining} place{'s' if remaining > 1 else ''}** dans ce groupe."
         ),
         color=COLOR_OPEN
     )
@@ -95,17 +88,15 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
     embed.add_field(
         name="💵 Économie réalisée",
         value=(
-            f"• Prix Agency **solo** (avec code) : ~{PRIX_SOLO_AVEC_CODE_EUR}€/mois\n"
-            f"• Prix Agency **en groupe** : **{PRIX_GROUPE_EUR}€/mois** ✅\n"
-            f"🎯 Tu économises **~{economie_mois}€/mois** soit **~{economie_annee}€/an** !"
+            f"Prix solo (avec code) : ~{PRIX_SOLO_EUR}€/mois ➔ Prix groupe : **{PRIX_GROUPE_EUR}€/mois**\n"
+            f"Tu économises **~{economie_annee}€/an** !"
         ),
         inline=False
     )
 
-    membres_str = " ".join([f"<@{m}>" for m in members]) if members else "*Aucun membre — sois le premier !*"
     embed.add_field(
         name=f"👥 Membres ({count}/{MAX_PLAYERS})",
-        value=f"{filled}{empty}  {membres_str}",
+        value=membres_str,
         inline=False
     )
 
@@ -124,10 +115,9 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
     embed.add_field(
         name="📋 Comment ça marche ?",
         value=(
-            "1️⃣ Clique sur **Rejoindre** pour bloquer ta place\n"
-            "2️⃣ À **5/5**, un salon secret se crée automatiquement 🔒\n"
-            "3️⃣ Vous organisez le paiement à l'intérieur\n"
-            f"4️⃣ Code **`{PROMO_CODE}`** → **-{REMISE_PCT}%** au moment de souscrire"
+            f"1️⃣ Clique sur **Rejoindre** pour bloquer ta place.\n"
+            f"2️⃣ À **{MAX_PLAYERS}/{MAX_PLAYERS}**, un salon secret se crée automatiquement. 🔒\n"
+            f"3️⃣ Vous vous organisez à l'intérieur pour le paiement !"
         ),
         inline=False
     )
