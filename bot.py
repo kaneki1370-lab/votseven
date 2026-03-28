@@ -11,7 +11,7 @@ TOKEN                = os.environ.get("DISCORD_TOKEN")
 LOBBY_CHANNEL_ID     = int(os.environ.get("LOBBY_CHANNEL_ID", 0))
 LOG_CHANNEL_ID       = int(os.environ.get("LOG_CHANNEL_ID", 0))
 PRIVATE_CATEGORY_ID  = int(os.environ.get("PRIVATE_CATEGORY_ID", 0))
-MAX_PLAYERS          = 2          # ✅ CORRIGÉ : remis à 5
+MAX_PLAYERS          = 5          # ✅ CORRIGÉ : remis à 5
 PROMO_CODE           = "SULEYECOM"
 DATA_FILE            = "lobbies.json"
 
