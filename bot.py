@@ -11,7 +11,7 @@ TOKEN                = os.environ.get("DISCORD_TOKEN")
 LOBBY_CHANNEL_ID     = int(os.environ.get("LOBBY_CHANNEL_ID", 0))
 LOG_CHANNEL_ID       = int(os.environ.get("LOG_CHANNEL_ID", 0))
 PRIVATE_CATEGORY_ID  = int(os.environ.get("PRIVATE_CATEGORY_ID", 0))
-MAX_PLAYERS          = 2  # Actuellement à 2 pour tes tests, tu pourras remettre 5
+MAX_PLAYERS          = 2  # ⚠️ Pense à remettre 5 quand tes tests seront terminés !
 PROMO_CODE           = "SULEYECOM"
 DATA_FILE            = "lobbies.json"
 
@@ -132,7 +132,6 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
         if user_id in lob["members"] and lob["status"] == "open":
             return await interaction.response.send_message(f"⚠️ Tu es déjà dans le Groupe #{lid}. Quitte-le d'abord.", ephemeral=True)
 
-    # Ajout du membre
     lobby["members"].append(user_id)
     lobby["join_times"][user_id] = datetime.utcnow().isoformat()
     places_restantes = MAX_PLAYERS - len(lobby["members"])
@@ -154,7 +153,7 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
         except Exception as e:
             print(f"Erreur public : {e}")
 
-        # 2. OUVERTURE DU NOUVEAU GROUPE IMMÉDIATE
+        # 2. OUVERTURE DU NOUVEAU GROUPE
         try:
             async with lobby_creation_lock:
                 fresh = load_data()
@@ -227,12 +226,16 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                 ),
                 inline=False
             )
+            
+            # --- BLOC MENTIONS SÉCURITÉ ---
             welcome_embed.add_field(
                 name="🆘 En cas de problème",
                 value="Un souci ou une question ? N'hésitez pas à mentionner <@706208703761874965> ou <@923601439815778315> pour qu'on vienne vous aider.",
                 inline=False
             )
+
             welcome_embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency • Salon modéré")
+            await private_chan.send(content=mentions, embed=welcome_embed)
 
             data2 = load_data()
             data2["lobbies"][key]["private_channel_id"] = str(private_chan.id)
@@ -250,11 +253,8 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
         except Exception as e:
             print(f"Erreur salon privé : {e}")
 
-        # 4. ENVOI DES LOGS
-        try:
-            await send_log(interaction.guild, lobby_id, interaction.user, "full", private_chan)
-        except Exception as e:
-            print(f"Erreur log complet : {e}")
+        # 4. ENVOI DES LOGS (Blondé)
+        await send_log(interaction.guild, lobby_id, interaction.user, "full", private_chan)
 
     # ─── SI LE GROUPE N'EST PAS ENCORE PLEIN ───
     else:
@@ -265,8 +265,8 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
             channel = bot.get_channel(LOBBY_CHANNEL_ID)
             msg     = await channel.fetch_message(int(lobby["message_id"]))
             await msg.edit(embed=build_embed(lobby_id, lobby["members"]), view=LobbyView(lobby_id))
-        except Exception as e:
-            print(f"Erreur edit message: {e}")
+        except Exception:
+            pass
 
         try:
             await interaction.user.send(
@@ -307,9 +307,22 @@ async def handle_leave(interaction: discord.Interaction, lobby_id: int):
     await send_log(interaction.guild, lobby_id, interaction.user, "leave", None)
 
 
+# ─── SYSTEME DE LOGS SÉCURISÉ ────────────────────────────────────────────────
 async def send_log(guild: discord.Guild, lobby_id: int, user, action: str, private_chan=None):
-    log_channel = bot.get_channel(LOG_CHANNEL_ID)
-    if not log_channel: return
+    if LOG_CHANNEL_ID == 0:
+        print("Erreur : L'ID du salon de log n'est pas défini (0).")
+        return
+
+    # Recherche forcée du salon si le cache Discord est vide
+    try:
+        log_channel = bot.get_channel(LOG_CHANNEL_ID) or await bot.fetch_channel(LOG_CHANNEL_ID)
+    except Exception as e:
+        print(f"Erreur d'accès au salon de logs : {e}")
+        return
+
+    if not log_channel:
+        print(f"Salon de log introuvable avec l'ID {LOG_CHANNEL_ID}")
+        return
 
     icons   = {"join": "➕", "leave": "➖", "full": "✅", "create": "🆕", "close": "🗑️"}
     colors  = {"join": 0x3498DB, "leave": 0xE74C3C, "full": 0x2ECC71, "create": 0x9B59B6, "close": 0x95A5A6}
@@ -328,14 +341,19 @@ async def send_log(guild: discord.Guild, lobby_id: int, user, action: str, priva
         timestamp=datetime.utcnow()
     )
     if not is_system:
+        # On utilise display_avatar pour éviter les crashs si l'utilisateur n'a pas de photo de profil
         embed.set_thumbnail(url=user.display_avatar.url)
         embed.add_field(name="Utilisateur", value=f"{user.mention} (`{user.id}`)", inline=True)
+    
     embed.add_field(name="Groupe", value=f"#{lobby_id}", inline=True)
     
     if private_chan:
         embed.add_field(name="🔒 Salon privé", value=private_chan.mention, inline=False)
 
-    await log_channel.send(embed=embed)
+    try:
+        await log_channel.send(embed=embed)
+    except Exception as e:
+        print(f"Erreur lors de l'envoi du message de log : {e}")
 
 
 async def create_new_lobby(guild: discord.Guild):
