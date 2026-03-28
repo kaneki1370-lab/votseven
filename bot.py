@@ -210,7 +210,7 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                     f"• Plan : **Brandsearch Agency** (149$/mois)\n"
                     f"• Code : **`{PROMO_CODE}`** → **-{REMISE_PCT}%**\n"
                     f"• Prix par personne : **{PRIX_GROUPE_EUR}€/mois** 🎯\n"
-                    f"• Économie vs solo (avec code) : ~**{economie_annee}€/an**"
+                    f"• Économie avec le code \"SULEYECOM\" : ~**{economie_annee}€/an**"
                 ),
                 inline=False
             )
@@ -219,7 +219,7 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                 value=(
                     "1️⃣ Désignez un **référent** qui souscrit l'abonnement\n"
                     "2️⃣ Le référent partage son **RIB** ici\n"
-                    f"3️⃣ Les autres font un virement de **{PRIX_GROUPE_EUR}€** au référent\n"
+                    "3️⃣ Les autres font un virement au référent\n"
                     f"4️⃣ Le référent souscrit avec le code **`{PROMO_CODE}`**\n"
                     "5️⃣ Il ajoute vos **emails** dans l'espace Agency\n"
                     "6️⃣ Chacun a ses propres accès — aucune donnée partagée 🔐"
@@ -234,7 +234,7 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                 inline=False
             )
 
-            welcome_embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency • Salon modéré")
+            welcome_embed.set_footer(text=f"Groupe #{lobby_id} • SuleyEcom • Salon modéré")
             await private_chan.send(content=mentions, embed=welcome_embed)
 
             data2 = load_data()
@@ -253,7 +253,7 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
         except Exception as e:
             print(f"Erreur salon privé : {e}")
 
-        # 4. ENVOI DES LOGS (Blondé)
+        # 4. ENVOI DES LOGS
         await send_log(interaction.guild, lobby_id, interaction.user, "full", private_chan)
 
     # ─── SI LE GROUPE N'EST PAS ENCORE PLEIN ───
