@@ -227,8 +227,12 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                 ),
                 inline=False
             )
+            welcome_embed.add_field(
+                name="🆘 En cas de problème",
+                value="Un souci ou une question ? N'hésitez pas à mentionner <@706208703761874965> ou <@923601439815778315> pour qu'on vienne vous aider.",
+                inline=False
+            )
             welcome_embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency • Salon modéré")
-            await private_chan.send(content=mentions, embed=welcome_embed)
 
             data2 = load_data()
             data2["lobbies"][key]["private_channel_id"] = str(private_chan.id)
