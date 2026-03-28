@@ -53,76 +53,52 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
     # ── Lobby COMPLET ──
     if full:
         embed = discord.Embed(
-            title="✅  Groupe #" + str(lobby_id) + " — COMPLET",
             description=(
-                "Ce groupe est **complet** ! Les 5 membres sont dans leur salon privé.\n"
-                "Un nouveau groupe a été ouvert ci-dessous 👇"
+                f"## ✅ Groupe #{lobby_id} — Complet\n"
+                "Les 5 membres ont leur salon privé. Un nouveau groupe est ouvert ci-dessous 👇"
             ),
-            color=COLOR_FULL
+            color=0xF7B267   # Ambre DA
         )
         embed.add_field(
-            name="Membres du groupe",
+            name="Membres",
             value=" ".join([f"<@{m}>" for m in members]),
             inline=False
         )
-        embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency")
+        embed.set_footer(text=f"Groupe #{lobby_id}  ·  Brandsearch Agency")
         return embed
 
     # ── Lobby OUVERT ──
-    # Calcul tout en euros pour cohérence
-    PRIX_SOLO_EUR  = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100) * 0.93, 2)  # ~83€/mois avec code, seul
+    PRIX_SOLO_EUR  = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100) * 0.93, 2)
     economie_annee = round((PRIX_SOLO_EUR - PRIX_GROUPE_EUR) * 12, 2)
-
-    membres_str = " ".join([f"<@{m}>" for m in members]) if members else "*Aucun membre — sois le premier !*"
+    membres_str    = " ".join([f"<@{m}>" for m in members]) if members else "*Aucun membre — sois le premier !*"
 
     embed = discord.Embed(
-        title=f"💰 Groupe #{lobby_id} — {count}/{MAX_PLAYERS} membres",
         description=(
-            f"**Brandsearch Agency pour {PRIX_GROUPE_EUR}€/mois** 🔥\n"
-            f"Divisez le prix par 5 et profitez de **-{REMISE_PCT}%** avec le code **`{PROMO_CODE}`**.\n"
-            f"Il reste **{remaining} place{'s' if remaining > 1 else ''}** dans ce groupe."
+            f"## 💸 {PRIX_GROUPE_EUR}€ / mois · Brandsearch Agency\n"
+            f"Groupe de {MAX_PLAYERS} · Code **`{PROMO_CODE}`** · **-{REMISE_PCT}%**\n\n"
+            f"Solo avec code : ~~{PRIX_SOLO_EUR}€~~ → **{PRIX_GROUPE_EUR}€** · soit **{economie_annee}€ économisés/an**"
         ),
-        color=COLOR_OPEN
+        color=0xFF6B35   # Orange DA
     )
 
     embed.add_field(
-        name="💵 Économie réalisée",
-        value=(
-            f"Prix solo (avec code) : ~{PRIX_SOLO_EUR}€/mois ➔ Prix groupe : **{PRIX_GROUPE_EUR}€/mois**\n"
-            f"Tu économises **~{economie_annee}€/an** !"
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name=f"👥 Membres ({count}/{MAX_PLAYERS})",
+        name=f"👥 {count}/{MAX_PLAYERS} membres · {remaining} place{'s' if remaining > 1 else ''} restante{'s' if remaining > 1 else ''}",
         value=membres_str,
         inline=False
     )
 
     embed.add_field(
-        name="🚀 Brandsearch Agency inclut",
+        name="⚡ Comment ça marche",
         value=(
-            "• **Brand Library** — Unlimited stores (spy Shopify, trafic, demande)\n"
-            "• **Spectre** — 100 marques trackées en simultané\n"
-            "• **Discovery** — Unlimited (ads qui vendent, triggers émotionnels IA)\n"
-            "• **Swipe Files** — Chrome ext, Instagram auto-sync\n"
-            "• **Remplace Foreplay & Atria** — 150$/mois économisés en plus ✅"
+            f"**1.** Rejoins le groupe\n"
+            f"**2.** À {MAX_PLAYERS}/5 → salon privé créé automatiquement 🔒\n"
+            f"**3.** Vous organisez le paiement entre vous\n"
+            f"**4.** Code **`{PROMO_CODE}`** au moment de souscrire"
         ),
         inline=False
     )
 
-    embed.add_field(
-        name="📋 Comment ça marche ?",
-        value=(
-            f"1️⃣ Clique sur **Rejoindre** pour bloquer ta place.\n"
-            f"2️⃣ À **{MAX_PLAYERS}/{MAX_PLAYERS}**, un salon secret se crée automatiquement. 🔒\n"
-            f"3️⃣ Vous vous organisez à l'intérieur pour le paiement !"
-        ),
-        inline=False
-    )
-
-    embed.set_footer(text=f"Groupe #{lobby_id} • Brandsearch Agency • Code : {PROMO_CODE}")
+    embed.set_footer(text=f"Groupe #{lobby_id}  ·  Brandsearch Agency  ·  {PROMO_CODE}")
     return embed
 
 
