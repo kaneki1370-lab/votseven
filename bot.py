@@ -214,7 +214,7 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                     f"• Plan : **Brandsearch Agency** (149$/mois)\n"
                     f"• Code : **`{PROMO_CODE}`** → **-{REMISE_PCT}%**\n"
                     f"• Prix par personne : **{PRIX_GROUPE_EUR_HT}€ HT/mois** 🎯\n" # Mis à jour HT
-                    f"• Économie vs solo (avec code HT) : ~**{economie_annee}€/an**"
+                    f"• Économie avec le code **`{PROMO_CODE}`** : ~**{economie_annee}€/an**"
                 ),
                 inline=False
             )
