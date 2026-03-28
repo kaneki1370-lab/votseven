@@ -17,7 +17,7 @@ DATA_FILE            = "lobbies.json"
 
 PRIX_ORIGINAL_USD  = 149
 REMISE_PCT         = 40
-PRIX_GROUPE_EUR_HT = 16.50  # On note explicitement que c's'est du HT
+PRIX_GROUPE_EUR_HT = 16.50  # On note explicitement que c'est du HT
 
 COLOR_OPEN   = 0xFFD700
 COLOR_FULL   = 0x2ECC71
@@ -67,7 +67,7 @@ def build_embed(lobby_id: int, members: list, status: str = "open") -> discord.E
         embed.set_footer(text=f"Groupe #{lobby_id}  ·  SuleyEcom")
         return embed
 
-    # Calcul des économies (on garde la logique en HT pour l's'affichage)
+    # Calcul des économies (on garde la logique en HT pour l'affichage)
     PRIX_SOLO_EUR_HT = round(PRIX_ORIGINAL_USD * (1 - REMISE_PCT / 100) * 0.93, 2)
     economie_annee   = round((PRIX_SOLO_EUR_HT - PRIX_GROUPE_EUR_HT) * 12, 2)
     membres_str      = " ".join([f"<@{m}>" for m in members]) if members else "*Aucun membre — sois le premier !*"
@@ -213,8 +213,8 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                 value=(
                     f"• Plan : **Brandsearch Agency** (149$/mois)\n"
                     f"• Code : **`{PROMO_CODE}`** → **-{REMISE_PCT}%**\n"
-                    f"• Prix par personne : **{PRIX_GROUPE_EUR_HT}€ HT/mois** 🎯\n" # Mis à jour HT
-                    f"• Économie avec le code **`{PROMO_CODE}`** : ~**{economie_annee}€/an**"
+                    f"• Prix par personne : **{PRIX_GROUPE_EUR_HT}€ HT/mois** 🎯\n" 
+                    f"• Économie avec le code \"SULEYECOM\" : ~**{economie_annee}€/an**"
                 ),
                 inline=False
             )
@@ -223,7 +223,7 @@ async def handle_join(interaction: discord.Interaction, lobby_id: int):
                 value=(
                     "1️⃣ Désignez un **référent** qui souscrit l'abonnement\n"
                     "2️⃣ Le référent partage son **RIB** ici\n"
-                    f"3️⃣ Les autres font un virement de **{PRIX_GROUPE_EUR_HT}€ HT** au référent\n" # Mis à jour HT
+                    "3️⃣ Les autres font un virement au référent\n" # ← ICI : la modification a été faite !
                     f"4️⃣ Le référent souscrit avec le code **`{PROMO_CODE}`** sur Brandsearch\n"
                     "5️⃣ Il ajoute vos **emails** dans l'espace Agency\n"
                     "6️⃣ Chacun a ses propres accès — aucune donnée partagée 🔐"
@@ -302,7 +302,7 @@ async def handle_leave(interaction: discord.Interaction, lobby_id: int):
         return await interaction.response.send_message("⛔ Le groupe est complet, tu ne peux plus quitter. Gère ça dans votre salon privé.", ephemeral=True)
 
     lobby["members"].remove(user_id)
-    lobby["join_times"][user_id] = datetime.utcnow().isoformat()
+    lobby["join_times"].pop(user_id, None)
     save_data(data)
 
     await interaction.response.defer()
